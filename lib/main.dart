@@ -1,14 +1,16 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-//import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_core/firebase_core.dart';
 //import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'constants.dart';
-//import 'firebase_storage.dart';
+import 'firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +21,7 @@ void main() async {
             apiKey: Constants.apiKey,
             appId: Constants.appId,
             messagingSenderId: Constants.messagingSenderId,
-            projectId: Constants.projectId,));
+            projectId: Constants.projectId));
   }
 
   else{
@@ -27,6 +29,7 @@ void main() async {
   }
   runApp(MyApp());
 }
+
 class MyApp extends StatelessWidget{
 
   @override
@@ -36,6 +39,21 @@ class MyApp extends StatelessWidget{
     );
   }
 }
+
+// class FireStorageService extends ChangeNotifier {
+//   FireStorageService();
+//   static Future<dynamic> loadImage(BuildContext context, String Image) async {
+//     return await FirebaseStorage.instance.ref().child(Image).getDownloadURL();
+//   }
+// }
+//
+// Future<Widget> _getImage(BuildContext context, String imageName) async {
+//   late Image image;
+//   await FireStorageService.loadImage(context, imageName).then((value) {
+//     image = Image.network(value.toString(), fit: BoxFit.scaleDown);
+//   });
+//   return image;
+// }
 
 class UploadingImageToFirebaseStorage extends StatefulWidget{
   @override
@@ -65,16 +83,24 @@ class  _UploadingImageToFirebaseStorageState
     }
   }
 
+
   Future uploadImageToFirebase(BuildContext context) async{
+    late String imageUrl;
     String fileName = basename(imageFile.path);
     Reference firebaseStorageRef =
     FirebaseStorage.instance.ref().child('uploads/$fileName');
     UploadTask uploadTask = firebaseStorageRef.putFile(imageFile);
-    TaskSnapshot taskSnapshot = await uploadTask;
-    taskSnapshot.ref.getDownloadURL().then(
-            (value) => print("Done: $value")
-    );
+    uploadTask.whenComplete(() async{
+      try{
+        imageUrl = await firebaseStorageRef.getDownloadURL();
+      }catch(onError){
+        print("Error");
+      }
+      return imageUrl;
+
+    });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -85,22 +111,21 @@ class  _UploadingImageToFirebaseStorageState
         padding: EdgeInsets.all(20),
         child: Column(
           children: [
-            // SizedBox(height: 20,),
-            // SizedBox(height: 20,),
-            // Padding(
-            //   padding: const EdgeInsets.all(10.0),
-            //   child: CircleAvatar(
-            //     radius: 85,
-            //     child: ClipOval(
-            //       child: Image.asset(
-            //         'assets/pfp.jpeg',
-            //         fit: BoxFit.cover,
-            //         width: 200,
-            //         height: 200,
-            //       ),
-            //     ),
-            //   ),
-            // ),
+            SizedBox(height: 20,),
+            SizedBox(height: 20,),
+            Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: CircleAvatar(
+                radius: 85,
+                child: ClipOval(
+                  child: users.containsKey('imageUrl') ? Image.network(
+                        '${users['imageUrl']}') : Container(),
+                      ),
+
+                  ),
+                ),
+              ),
+            ),
             Align(
               alignment: Alignment.center,
               child: TextButton(
@@ -114,11 +139,14 @@ class  _UploadingImageToFirebaseStorageState
                 ),
               ),
             ),
-            const SizedBox(height: 24,),
-            textField("Name","Jane Doe"),
-            textField("Email","janedoe@xyz.com"),
-            textField("Location", "Delhi"),
-            textField("Phone Number","9845XXXXXX"),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: ),
+            )
+            //const SizedBox(height: 24,),
+            // textField("Name","Jane Doe"),
+            // textField("Email","janedoe@xyz.com"),
+            // textField("Location", "Delhi"),
+            // textField("Phone Number","9845XXXXXX"),
             Container(
               padding: EdgeInsets.all(15.0),
               height: 50,
